@@ -50,7 +50,7 @@ public class DVDCorner {
 					for (DVD dvd: dvdStore) {
 						if (dvd.getDvdID() == dvdId) {							
 							dvd.setNumAvailable(dvd.getNumAvailable() + copiesDonated);
-							Command cmd = new Command("Accept", dvd.getDvdID(), dvd.getTitle(), copiesDonated);
+							Command cmd = new Command("Accept", dvd.getDvdID(), dvd.getTitle(), copiesDonated, null, null, 0);
 							undoList.add(cmd);
 							System.out.println("Donation accepted: " + dvd.getTitle());
 							System.out.println("Number of available copies: " + dvd.getNumAvailable());
@@ -94,7 +94,7 @@ public class DVDCorner {
 					for (DVD dvdInStore : dvdStore) {
 						if (dvdInStore.getDvdID() == Integer.valueOf(dvdDetail[0])) {
 							dvdInStore.setNumAvailable(dvdInStore.getNumAvailable() + Integer.valueOf(dvdDetail[3]));
-							Command cmd = new Command("Accept", dvdInStore.getDvdID(), dvdInStore.getTitle(), Integer.valueOf(dvdDetail[3]));
+							Command cmd = new Command("Accept", dvdInStore.getDvdID(), dvdInStore.getTitle(), Integer.valueOf(dvdDetail[3]), null, null, 0);
 							undoList.add(cmd);
 							isCopyExist = true;
 							break;
@@ -102,7 +102,7 @@ public class DVDCorner {
 					}
 					if (!isCopyExist) {
 						dvdStore.add(DVDFactory.newDVD(dvdType, Integer.valueOf(dvdDetail[0].trim()), dvdDetail[1].trim(), Integer.valueOf(dvdDetail[2].trim()), Integer.valueOf(dvdDetail[3].trim()), singer, director));
-						Command cmd = new Command("Create", Integer.valueOf(dvdDetail[0].trim()), dvdDetail[1].trim(), Integer.valueOf(dvdDetail[3].trim()));
+						Command cmd = new Command("Create", Integer.valueOf(dvdDetail[0].trim()), dvdDetail[1].trim(), null, singer, director, Integer.valueOf(dvdDetail[2].trim()));
 						undoList.add(cmd);
 					}
 					System.out.println("DVD record created");
@@ -129,6 +129,7 @@ public class DVDCorner {
 				for (Command cmd: redoList) {
 					System.out.println(cmd.toString());
 				}
+				System.out.println();	
 				break;
 			case "g":
 				//Get back a DVD
@@ -140,7 +141,7 @@ public class DVDCorner {
 						if (dvd.getDvdID() == dvdId) {							
 							isDvdExist = true;
 							dvd.setNumAvailable(dvd.getNumAvailable() + 1);
-							Command cmd = new Command("Get back", dvd.getDvdID(), dvd.getTitle(), 1);
+							Command cmd = new Command("Get back", dvd.getDvdID(), dvd.getTitle(), 1, null, null, 0);
 							undoList.add(cmd);
 							System.out.println("Returned: " + dvd.getTitle());
 							System.out.println("Number of available copies: " + dvd.getNumAvailable());
@@ -169,7 +170,7 @@ public class DVDCorner {
 								break;
 							}
 							dvd.setNumAvailable(dvd.getNumAvailable() - 1);
-							Command cmd = new Command("Lend", dvd.getDvdID(), dvd.getTitle(), 1);
+							Command cmd = new Command("Lend", dvd.getDvdID(), dvd.getTitle(), 1, null, null, 0);
 							undoList.add(cmd);
 							System.out.println("Lent out: " + dvd.getTitle());
 							System.out.println("Number of available copies: " + dvd.getNumAvailable());
@@ -184,6 +185,52 @@ public class DVDCorner {
 					System.out.println();
 				}
 				break;
+			case "r":
+				Command redoCmd = redoList.get(redoList.size() - 1);
+				if (redoCmd.getAction().equals("Create")) {
+					boolean isCopyExist = false;
+					for (DVD dvdInStore : dvdStore) {
+						if (dvdInStore.getDvdID() == redoCmd.getDvdId()) {
+							System.out.println("Dvd with ID already exist, cannot redo command.");
+							isCopyExist = true;
+							break;
+						}
+					}
+					String dvdType2 = "";
+					if (redoCmd.getSinger() != null && !redoCmd.getSinger().isEmpty()) {
+						dvdType2 = "mv";
+					}else {
+						dvdType2 = "mo";
+					}
+					if (!isCopyExist) {
+						dvdStore.add(DVDFactory.newDVD(dvdType2, redoCmd.getDvdId(), redoCmd.getTitle(), redoCmd.getLength(), redoCmd.getCopies(), redoCmd.getSinger(), redoCmd.getDirector()));
+					}
+				}else if (redoCmd.getAction().equals("Accept")) {
+					for (DVD dvd: dvdStore) {
+						if (dvd.getDvdID() == redoCmd.getDvdId()) {
+							dvd.setNumAvailable(dvd.getNumAvailable() + redoCmd.getCopies());
+							break;
+						}
+					}
+				}else if (redoCmd.getAction().equals("Lend")) {
+					for (DVD dvd: dvdStore) {
+						if (dvd.getDvdID() == redoCmd.getDvdId()) {
+							dvd.setNumAvailable(dvd.getNumAvailable() - 1);
+							break;
+						}
+					}
+				}else if (redoCmd.getAction().equals("Get back")) {
+					for (DVD dvd: dvdStore) {
+						if (dvd.getDvdID() == redoCmd.getDvdId()) {
+							dvd.setNumAvailable(dvd.getNumAvailable() + 1);
+							break;
+						}
+					}
+				}
+				redoList.remove(redoCmd);
+				System.out.println("redo completed.");
+				System.out.println();
+				break;				
 			case "s":
 				//Show record
 				System.out.println("Enter ID (a to show all):");
@@ -238,6 +285,42 @@ public class DVDCorner {
 						System.out.println();	
 					}
 				}
+				break;
+			case "u":
+				Command undoCmd = undoList.get(undoList.size() - 1);
+				if (undoCmd.getAction().equals("Create")) {
+					for (DVD dvd: dvdStore) {
+						if (dvd.getDvdID() == undoCmd.getDvdId()) {
+							dvdStore.remove(dvd);
+							break;
+						}
+					}
+				}else if (undoCmd.getAction().equals("Accept")) {
+					for (DVD dvd: dvdStore) {
+						if (dvd.getDvdID() == undoCmd.getDvdId()) {
+							dvd.setNumAvailable(dvd.getNumAvailable() - undoCmd.getCopies());
+							break;
+						}
+					}
+				}else if (undoCmd.getAction().equals("Lend")) {
+					for (DVD dvd: dvdStore) {
+						if (dvd.getDvdID() == undoCmd.getDvdId()) {
+							dvd.setNumAvailable(dvd.getNumAvailable() + 1);
+							break;
+						}
+					}
+				}else if (undoCmd.getAction().equals("Get back")) {
+					for (DVD dvd: dvdStore) {
+						if (dvd.getDvdID() == undoCmd.getDvdId()) {
+							dvd.setNumAvailable(dvd.getNumAvailable() - 1);
+							break;
+						}
+					}
+				}
+				redoList.add(undoCmd);
+				undoList.remove(undoCmd);
+				System.out.println("undo completed.");
+				System.out.println();
 				break;
 			case "x":
 				System.out.println("Exiting System...");
